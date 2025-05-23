@@ -1,0 +1,316 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Web3 Hackathon Finder</title>
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet">
+    <style>
+        body {
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+            background-color: #f8f9fa;
+            color: #212529;
+        }
+        .navbar {
+            background: linear-gradient(90deg, #6610f2, #6f42c1);
+        }
+        .navbar-brand {
+            font-weight: bold;
+            color: white !important;
+        }
+        .card {
+            border-radius: 10px;
+            box-shadow: 0 4px 6px rgba(0, 0, 0, 0.1);
+            transition: transform 0.3s ease;
+            margin-bottom: 20px;
+            border: none;
+        }
+        .card:hover {
+            transform: translateY(-5px);
+        }
+        .card-header {
+            background: linear-gradient(90deg, #6f42c1, #6610f2);
+            color: white;
+            font-weight: bold;
+            border-radius: 10px 10px 0 0 !important;
+        }
+        .badge-online {
+            background-color: #20c997;
+        }
+        .badge-presencial {
+            background-color: #fd7e14;
+        }
+        .btn-primary {
+            background-color: #6f42c1;
+            border-color: #6f42c1;
+        }
+        .btn-primary:hover {
+            background-color: #6610f2;
+            border-color: #6610f2;
+        }
+        .loading {
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            height: 200px;
+        }
+        .spinner-border {
+            width: 3rem;
+            height: 3rem;
+            color: #6f42c1;
+        }
+        .filter-section {
+            background-color: white;
+            border-radius: 10px;
+            box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
+            padding: 20px;
+            margin-bottom: 20px;
+        }
+        .no-results {
+            text-align: center;
+            padding: 50px;
+            background-color: white;
+            border-radius: 10px;
+            box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
+        }
+    </style>
+</head>
+<body>
+    <nav class="navbar navbar-expand-lg navbar-dark mb-4">
+        <div class="container">
+            <a class="navbar-brand" href="#">Web3 Hackathon Finder</a>
+            <button class="navbar-toggler" type="button" data-bs-toggle="collapse" data-bs-target="#navbarNav">
+                <span class="navbar-toggler-icon"></span>
+            </button>
+            <div class="collapse navbar-collapse" id="navbarNav">
+                <ul class="navbar-nav ms-auto">
+                    <li class="nav-item">
+                        <a class="nav-link active" href="#">Home</a>
+                    </li>
+                    <li class="nav-item">
+                        <a class="nav-link" href="#" data-bs-toggle="modal" data-bs-target="#aboutModal">Sobre</a>
+                    </li>
+                </ul>
+            </div>
+        </div>
+    </nav>
+
+    <div class="container">
+        <div class="row mb-4">
+            <div class="col-12">
+                <div class="filter-section">
+                    <h4 class="mb-3">Filtros</h4>
+                    <div class="row">
+                        <div class="col-md-6 mb-3">
+                            <label for="locationFilter" class="form-label">Localização</label>
+                            <select class="form-select" id="locationFilter">
+                                <option value="all">Todas as localizações</option>
+                                <option value="São Paulo" selected>São Paulo</option>
+                                <option value="online">Apenas Online</option>
+                            </select>
+                        </div>
+                        <div class="col-md-6 d-flex align-items-end">
+                            <button id="searchButton" class="btn btn-primary w-100">Buscar Hackathons</button>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <div id="loading" class="loading">
+            <div class="spinner-border" role="status">
+                <span class="visually-hidden">Carregando...</span>
+            </div>
+        </div>
+
+        <div id="noResults" class="no-results" style="display: none;">
+            <h3>Nenhum hackathon encontrado</h3>
+            <p>Tente mudar os filtros para encontrar mais resultados.</p>
+        </div>
+
+        <div id="hackathonsList" class="row">
+            <!-- Os cards de hackathons serão inseridos aqui via JavaScript -->
+        </div>
+    </div>
+
+    <!-- Modal Sobre -->
+    <div class="modal fade" id="aboutModal" tabindex="-1" aria-hidden="true">
+        <div class="modal-dialog">
+            <div class="modal-content">
+                <div class="modal-header">
+                    <h5 class="modal-title">Sobre o Web3 Hackathon Finder</h5>
+                    <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+                </div>
+                <div class="modal-body">
+                    <p>Esta aplicação web foi desenvolvida para encontrar hackathons de Web3 que estejam para acontecer, seja online ou presencialmente em São Paulo.</p>
+                    <p>A aplicação faz web scraping em diversas fontes, incluindo:</p>
+                    <ul>
+                        <li>X (Twitter)</li>
+                        <li>Sites específicos de hackathons (Devpost, Gitcoin, TAIKAI)</li>
+                        <li>Outras fontes relevantes</li>
+                    </ul>
+                    <p>Desenvolvido com Flask e tecnologias web modernas.</p>
+                </div>
+                <div class="modal-footer">
+                    <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Fechar</button>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/js/bootstrap.bundle.min.js"></script>
+    <script>
+        document.addEventListener('DOMContentLoaded', function() {
+            // Elementos do DOM
+            const hackathonsList = document.getElementById('hackathonsList');
+            const loadingElement = document.getElementById('loading');
+            const noResultsElement = document.getElementById('noResults');
+            const locationFilter = document.getElementById('locationFilter');
+            const searchButton = document.getElementById('searchButton');
+
+            // Função para buscar hackathons
+            function fetchHackathons() {
+                // Mostrar loading
+                loadingElement.style.display = 'flex';
+                hackathonsList.innerHTML = '';
+                noResultsElement.style.display = 'none';
+
+                // Obter valor do filtro
+                const location = locationFilter.value;
+                let apiUrl = '/api/hackathons';
+                
+                if (location === 'online') {
+                    apiUrl += '?online_only=true';
+                } else if (location !== 'all') {
+                    apiUrl += `?location=${encodeURIComponent(location)}`;
+                }
+
+                // Simular dados para demonstração (em produção, usaria fetch real)
+                setTimeout(() => {
+                    // Dados simulados para demonstração
+                    const simulatedData = {
+                        hackathons: [
+                            {
+                                title: "Web3 Global Hackathon",
+                                description: "Construa o futuro da Web3 com blockchain, NFTs e DeFi",
+                                date: "15 de Junho a 30 de Junho, 2025",
+                                url: "https://example.com/web3-global",
+                                location: "Online",
+                                is_online: true,
+                                prizes: "$50,000 em prémios",
+                                source: "Devpost"
+                            },
+                            {
+                                title: "São Paulo Blockchain Week Hackathon",
+                                description: "Hackathon presencial durante a Blockchain Week em São Paulo",
+                                date: "10 de Julho a 12 de Julho, 2025",
+                                url: "https://example.com/sp-blockchain-week",
+                                location: "São Paulo, Brasil",
+                                is_online: false,
+                                prizes: "R$30.000 em prémios",
+                                source: "TAIKAI"
+                            },
+                            {
+                                title: "Ethereum Layer 2 Hackathon",
+                                description: "Desenvolva soluções escaláveis em Layer 2 para Ethereum",
+                                date: "1 de Junho a 20 de Junho, 2025",
+                                url: "https://example.com/l2-scaling",
+                                location: "Online",
+                                is_online: true,
+                                prizes: "$75,000 em prémios",
+                                source: "Gitcoin"
+                            },
+                            {
+                                title: "Web3 Brasil Hackathon",
+                                description: "O maior hackathon de Web3 do Brasil",
+                                date: "5 de Julho a 7 de Julho, 2025",
+                                url: "https://example.com/web3-brasil",
+                                location: "São Paulo, Brasil",
+                                is_online: false,
+                                prizes: "R$50.000 em prémios",
+                                source: "Twitter (X)"
+                            }
+                        ]
+                    };
+
+                    // Filtrar dados simulados com base na localização
+                    let filteredHackathons = simulatedData.hackathons;
+                    if (location === 'online') {
+                        filteredHackathons = filteredHackathons.filter(h => h.is_online);
+                    } else if (location !== 'all') {
+                        filteredHackathons = filteredHackathons.filter(h => 
+                            h.location.toLowerCase().includes(location.toLowerCase()));
+                    }
+
+                    // Esconder loading
+                    loadingElement.style.display = 'none';
+
+                    // Verificar se há resultados
+                    if (filteredHackathons.length === 0) {
+                        noResultsElement.style.display = 'block';
+                        return;
+                    }
+
+                    // Renderizar hackathons
+                    filteredHackathons.forEach(hackathon => {
+                        const card = document.createElement('div');
+                        card.className = 'col-md-6 col-lg-4';
+                        
+                        card.innerHTML = `
+                            <div class="card h-100">
+                                <div class="card-header d-flex justify-content-between align-items-center">
+                                    <span>${hackathon.title}</span>
+                                    <span class="badge ${hackathon.is_online ? 'badge-online' : 'badge-presencial'}">
+                                        ${hackathon.is_online ? 'Online' : 'Presencial'}
+                                    </span>
+                                </div>
+                                <div class="card-body">
+                                    <p class="card-text">${hackathon.description}</p>
+                                    <p><strong>Data:</strong> ${hackathon.date}</p>
+                                    <p><strong>Local:</strong> ${hackathon.location}</p>
+                                    <p><strong>Prêmios:</strong> ${hackathon.prizes || 'Não especificado'}</p>
+                                    <p><strong>Fonte:</strong> ${hackathon.source}</p>
+                                </div>
+                                <div class="card-footer bg-white border-0">
+                                    <a href="${hackathon.url}" target="_blank" class="btn btn-primary w-100">Ver Detalhes</a>
+                                </div>
+                            </div>
+                        `;
+                        
+                        hackathonsList.appendChild(card);
+                    });
+                }, 1500); // Simular tempo de carregamento
+
+                // Em produção, usaria fetch real:
+                /*
+                fetch(apiUrl)
+                    .then(response => response.json())
+                    .then(data => {
+                        loadingElement.style.display = 'none';
+                        
+                        if (data.hackathons.length === 0) {
+                            noResultsElement.style.display = 'block';
+                            return;
+                        }
+                        
+                        data.hackathons.forEach(hackathon => {
+                            // Código para renderizar hackathons
+                        });
+                    })
+                    .catch(error => {
+                        console.error('Erro ao buscar hackathons:', error);
+                        loadingElement.style.display = 'none';
+                        hackathonsList.innerHTML = '<div class="col-12"><div class="alert alert-danger">Erro ao carregar hackathons. Tente novamente mais tarde.</div></div>';
+                    });
+                */
+            }
+
+            // Evento de clique no botão de busca
+            searchButton.addEventListener('click', fetchHackathons);
+
+            // Carregar hackathons ao iniciar a página
+            fetchHackathons();
+        });
+    </script>
+</body>
+</html>
